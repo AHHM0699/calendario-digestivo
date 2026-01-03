@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pooplendar 💩</title>
+
+  <!-- FullCalendar -->
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+    }
+
+    h1 {
+      text-align: center;
+      margin: 16px 0 8px;
+    }
+
+    #calendar {
+      max-width: 100%;
+      margin: 0 auto;
+      padding: 8px;
+    }
+
+    /* Botón 💩 flotante */
+    #poop-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 72px;
+      height: 72px;
+      font-size: 40px;
+      border-radius: 50%;
+      border: none;
+      background: #f5f5f5;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Pooplendar</h1>
+
+  <div id="calendar"></div>
+
+  <button id="poop-btn">💩</button>
+
+  <!-- FullCalendar JS -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const calendarEl = document.getElementById('calendar');
+
+      const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'es',
+        height: 'auto',
+        events: []
+      });
+
+      calendar.render();
+
+      document.getElementById('poop-btn').addEventListener('click', () => {
+        const now = new Date();
+        calendar.addEvent({
+          title: '💩',
+          start: now,
+          allDay: true
+        });
+      });
+    });
+  </script>
+</body>
+</html>
