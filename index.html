@@ -11,7 +11,6 @@
 :root{
   --brown-dark:#4e342e;
   --brown-main:#6d4c41;
-  --brown-soft:#a1887f;
   --brown-bg:#efe5db;
   --brown-card:#f7efe8;
   --brown-header:#e0cfc2;
@@ -47,7 +46,6 @@ h1{text-align:center;margin:12px 0 4px;color:var(--brown-main);}
   border-radius:16px;
   padding:6px;
 }
-
 .fc-col-header-cell{
   background:var(--brown-header);
   border:1px solid var(--brown-border);
@@ -99,9 +97,10 @@ h1{text-align:center;margin:12px 0 4px;color:var(--brown-main);}
 
 <div id="test-controls">
   🧪 Modo prueba:
-  <button onclick="setTestOffset(172790)">+2d</button>
-  <button onclick="setTestOffset(259190)">+3d</button>
-  <button onclick="setTestOffset(604790)">+7d</button>
+  <button onclick="setTestOffset(3600)">+1h</button>
+  <button onclick="setTestOffset(172800)">+2d</button>
+  <button onclick="setTestOffset(345600)">+4d</button>
+  <button onclick="setTestOffset(691200)">+8d</button>
   <button onclick="clearTestOffset()">Reset</button>
 </div>
 
@@ -174,18 +173,22 @@ function updateStatus(){
   counter.innerText=`⏱️ Última vez: ${formatElapsed(diff)}`;
   const level=getAlertLevel(diff);
 
-  if(!level){alertBox.style.display="none";recBox.style.display="none";return;}
+  if(!level){
+    alertBox.style.display="none";
+    recBox.style.display="none";
+    return;
+  }
 
   alertBox.style.display="block";
   recBox.style.display="block";
 
   if(level==="warning"){
     alertBox.innerText="⚠️ Han pasado más de 2 días sin evacuar.";
-    recBox.innerHTML="💧 Agua · 🚶 Caminar";
+    recBox.innerHTML="💧 Bebe más agua<br>🚶 Camina";
   }
   if(level==="alert"){
     alertBox.innerText="🚨 Más de 3 días sin evacuar.";
-    recBox.innerHTML="🥗 Fibra · 💧 Líquidos";
+    recBox.innerHTML="🥗 Fibra<br>💧 Líquidos";
   }
   if(level==="danger"){
     alertBox.innerText="❗ Más de una semana sin evacuar.";
@@ -196,7 +199,10 @@ function updateStatus(){
 /* ===== MODAL ===== */
 function openModal(event){
   selectedEvent=event;
-  document.getElementById("modal-date").innerText=event.start.toLocaleString();
+  const d=event.start;
+  document.getElementById("modal-date").innerText=
+    d.toLocaleDateString()+" "+
+    d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
   document.getElementById("modal-notes").value=event.extendedProps.notes||"";
   document.getElementById("modal").style.display="flex";
 }
@@ -204,23 +210,27 @@ function closeModal(){
   document.getElementById("modal").style.display="none";
 }
 function saveNotes(){
-  selectedEvent.setExtendedProp("notes",document.getElementById("modal-notes").value);
+  selectedEvent.setExtendedProp(
+    "notes",
+    document.getElementById("modal-notes").value
+  );
   persistEvents();
   closeModal();
 }
 function deleteEvent(){
   selectedEvent.remove();
-  events=events.filter(e=>e.id!==selectedEvent.id);
   persistEvents();
   closeModal();
 }
 function persistEvents(){
-  const data=calendar.getEvents().map(e=>({
-    id:e.id,title:e.title,start:e.start.toISOString(),
-    allDay:true,notes:e.extendedProps.notes||""
+  events=calendar.getEvents().map(e=>({
+    id:e.id,
+    title:e.title,
+    start:e.start.toISOString(),
+    allDay:false,
+    notes:e.extendedProps.notes||""
   }));
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
-  events=data;
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
   updateStatus();
 }
 
@@ -240,7 +250,7 @@ document.addEventListener("DOMContentLoaded",()=>{
       id:Date.now().toString(),
       title:"💩",
       start:new Date().toISOString(),
-      allDay:true,
+      allDay:false,
       notes:""
     };
     calendar.addEvent(ev);
