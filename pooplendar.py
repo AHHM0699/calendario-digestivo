@@ -42,13 +42,13 @@ def register_event():
 st.title("💩 Pooplendar")
 st.caption("Registro simple y rápido")
 
-# BOTÓN GRANDE
-if st.button("Registrar ida al baño", use_container_width=True):
+# BOTÓN PRINCIPAL (ICONO)
+if st.button("💩", use_container_width=True):
     register_event()
 
 st.divider()
 
-# CALENDARIO
+# ---------------- CALENDARIO ----------------
 today = date.today()
 year, month = today.year, today.month
 cal = calendar.monthcalendar(year, month)
@@ -77,7 +77,7 @@ for week in cal:
         if cols[i].button(label, key=d_str):
             selected_day = d_str
 
-# DETALLE DEL DÍA
+# ---------------- DETALLE DEL DÍA ----------------
 if selected_day:
     st.divider()
     st.subheader(f"📅 {selected_day}")
@@ -92,6 +92,13 @@ if selected_day:
                 ev["notes"] = st.text_area(
                     "Notas (opcional)",
                     ev["notes"],
-                    key=f"{selected_day}_{i}"
+                    key=f"{selected_day}_{i}_notes"
                 )
-        save_data(data)
+
+                if st.button(
+                    "🗑️ Eliminar registro",
+                    key=f"del_{selected_day}_{i}"
+                ):
+                    events.pop(i)
+                    save_data(data)
+                    st.experimental_rerun()
