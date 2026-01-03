@@ -239,6 +239,7 @@ function deleteEvent(id){
   const ev = calendar.getEventById(id);
   if(ev) ev.remove();
   persist();
+  calendar.rerenderEvents(); // 👈 AQUÍ TAMBIÉN
   openDayModal(selectedDay);
 }
 
