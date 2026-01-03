@@ -276,15 +276,16 @@ document.addEventListener("DOMContentLoaded",()=>{
   updateStatus();
 
   document.getElementById("poop-btn").onclick=()=>{
-    calendar.addEvent({
-      id:crypto.randomUUID(),
-      title:"💩",
-      start:new Date(),
-      notes:""
-    });
-    persist();
-    updateStatus();
-  };
+  calendar.addEvent({
+    id:crypto.randomUUID(),
+    title:"💩",
+    start:new Date(),
+    notes:""
+  });
+  persist();
+  calendar.rerenderEvents(); // 👈 ESTA ES LA CLAVE
+  updateStatus();
+};
 
   setInterval(updateStatus,1000);
 });
