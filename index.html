@@ -47,6 +47,20 @@ h1{
 #alert{ font-weight:600; }
 #recommendations{ background:#efe1d6; }
 
+#test-controls{
+  text-align:center;
+  margin-bottom:8px;
+}
+
+#test-controls button{
+  margin:2px;
+  border:none;
+  padding:4px 8px;
+  border-radius:6px;
+  background:#d7ccc8;
+}
+
+/* CALENDARIO */
 #calendar{ padding:8px; }
 
 .fc{
@@ -75,7 +89,7 @@ h1{
   font-size:20px;
 }
 
-/* Botón 💩 */
+/* BOTÓN 💩 */
 #poop-btn{
   position:fixed;
   bottom:20px;
@@ -95,7 +109,18 @@ h1{
 <body>
 
 <h1>Pooplendar</h1>
+
 <div id="counter">Aún no hay registros</div>
+
+<div id="test-controls">
+  🧪 Modo prueba:
+  <button onclick="setTestOffset(3600)">+1h</button>
+  <button onclick="setTestOffset(172800)">+2d</button>
+  <button onclick="setTestOffset(345600)">+4d</button>
+  <button onclick="setTestOffset(691200)">+8d</button>
+  <button onclick="clearTestOffset()">Reset</button>
+</div>
+
 <div id="alert"></div>
 <div id="recommendations"></div>
 
@@ -108,6 +133,19 @@ h1{
 const STORAGE_KEY = "pooplendar_events";
 let events = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
 let calendar;
+
+/* ---------- MODO PRUEBA ---------- */
+let testOffsetSeconds = null;
+
+function setTestOffset(seconds){
+  testOffsetSeconds = seconds;
+  updateStatus();
+}
+
+function clearTestOffset(){
+  testOffsetSeconds = null;
+  updateStatus();
+}
 
 /* ---------- FORMATO HUMANO DEL TIEMPO ---------- */
 function formatElapsed(seconds){
@@ -161,7 +199,8 @@ function updateStatus(){
   }
 
   const last=new Date(Math.max(...events.map(e=>new Date(e.start))));
-  const diffSec=Math.floor((Date.now()-last)/1000);
+  const realDiff=Math.floor((Date.now()-last)/1000);
+  const diffSec=testOffsetSeconds!==null ? testOffsetSeconds : realDiff;
 
   counter.innerText=`⏱️ Última vez: ${formatElapsed(diffSec)}`;
 
