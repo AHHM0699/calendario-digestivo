@@ -56,7 +56,7 @@ h1{text-align:center;margin:12px 0 4px;color:var(--brown-main);}
 }
 .fc-day-today{background:#e6d2c2 !important;}
 .fc-event{
-  background:transparent;border:none;font-size:20px;
+  background:transparent;border:none;font-size:18px;
 }
 
 /* Botón 💩 */
@@ -78,13 +78,16 @@ h1{text-align:center;margin:12px 0 4px;color:var(--brown-main);}
   background:#f7efe8;
   padding:16px;
   border-radius:14px;
-  width:90%;max-width:360px;
+  width:90%;max-width:380px;
 }
-#modal textarea{
-  width:100%;height:80px;
+.day-item{
+  background:#efe1d6;
+  border-radius:8px;
+  padding:8px;
+  margin-bottom:8px;
 }
-#modal button{
-  margin-top:6px;
+.day-item button{
+  margin-top:4px;
 }
 </style>
 </head>
@@ -112,13 +115,7 @@ h1{text-align:center;margin:12px 0 4px;color:var(--brown-main);}
 
 <!-- MODAL -->
 <div id="modal">
-  <div id="modal-content">
-    <h3 id="modal-date"></h3>
-    <textarea id="modal-notes" placeholder="Notas…"></textarea>
-    <button onclick="saveNotes()">💾 Guardar nota</button>
-    <button onclick="deleteEvent()">🗑️ Eliminar registro</button>
-    <button onclick="closeModal()">Cerrar</button>
-  </div>
+  <div id="modal-content"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
@@ -128,12 +125,19 @@ h1{text-align:center;margin:12px 0 4px;color:var(--brown-main);}
 const STORAGE_KEY="pooplendar_events";
 let events=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
 let calendar;
-let selectedEvent=null;
+let selectedDay=null;
 
 /* ===== MODO PRUEBA ===== */
 let testOffsetSeconds=null;
 function setTestOffset(sec){testOffsetSeconds=sec;updateStatus();}
 function clearTestOffset(){testOffsetSeconds=null;updateStatus();}
+
+/* ===== UTIL ===== */
+function getEventsByDay(dateStr){
+  return calendar.getEvents().filter(e =>
+    e.start.toISOString().slice(0,10) === dateStr
+  );
+}
 
 /* ===== TIEMPO HUMANO ===== */
 function formatElapsed(seconds){
@@ -196,32 +200,47 @@ function updateStatus(){
   }
 }
 
-/* ===== MODAL ===== */
-function openModal(event){
-  selectedEvent=event;
-  const d=event.start;
-  document.getElementById("modal-date").innerText=
-    d.toLocaleDateString()+" "+
-    d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-  document.getElementById("modal-notes").value=event.extendedProps.notes||"";
-  document.getElementById("modal").style.display="flex";
+/* ===== MODAL POR DÍA ===== */
+function openDayModal(dateStr){
+  selectedDay=dateStr;
+  const list=getEventsByDay(dateStr);
+  const modal=document.getElementById("modal");
+  const box=document.getElementById("modal-content");
+
+  let html=`<h3>${new Date(dateStr).toLocaleDateString()}</h3>`;
+
+  if(list.length===0){
+    html+=`<p>No hay registros este día.</p>`;
+  }
+
+  list.forEach(ev=>{
+    const t=ev.start.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    html+=`
+      <div class="day-item">
+        <strong>💩 ${t}</strong><br>
+        <small>${ev.extendedProps.notes||"Sin notas"}</small><br>
+        <button onclick="deleteById('${ev.id}')">🗑️ Eliminar</button>
+      </div>
+    `;
+  });
+
+  html+=`<button onclick="closeModal()">Cerrar</button>`;
+  box.innerHTML=html;
+  modal.style.display="flex";
 }
+
 function closeModal(){
   document.getElementById("modal").style.display="none";
 }
-function saveNotes(){
-  selectedEvent.setExtendedProp(
-    "notes",
-    document.getElementById("modal-notes").value
-  );
+
+function deleteById(id){
+  const ev=calendar.getEventById(id);
+  if(ev) ev.remove();
   persistEvents();
-  closeModal();
+  openDayModal(selectedDay);
 }
-function deleteEvent(){
-  selectedEvent.remove();
-  persistEvents();
-  closeModal();
-}
+
+/* ===== PERSISTENCIA ===== */
 function persistEvents(){
   events=calendar.getEvents().map(e=>({
     id:e.id,
@@ -240,9 +259,19 @@ document.addEventListener("DOMContentLoaded",()=>{
     initialView:"dayGridMonth",
     locale:"es",
     events:events,
-    displayEventTime: false,
-    eventClick:(info)=>openModal(info.event)
+    displayEventTime:false,
+
+    eventDidMount:(info)=>{
+      const day=info.event.start.toISOString().slice(0,10);
+      const count=getEventsByDay(day).length;
+      if(count>1){
+        info.el.innerHTML=`💩 x${count}`;
+      }
+    },
+
+    dateClick:(info)=>openDayModal(info.dateStr)
   });
+
   calendar.render();
   updateStatus();
 
