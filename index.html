@@ -27,12 +27,6 @@ body{
 h1{text-align:center;margin:12px 0 4px;color:var(--brown-main);}
 #counter{text-align:center;font-weight:600;margin-bottom:4px;}
 
-#test-controls{text-align:center;margin-bottom:8px;}
-#test-controls button{
-  margin:2px;border:none;padding:4px 8px;
-  border-radius:6px;background:#d7ccc8;
-}
-
 #alert,#recommendations{
   margin:6px 12px;padding:10px;
   border-radius:10px;display:none;
@@ -98,15 +92,6 @@ h1{text-align:center;margin:12px 0 4px;color:var(--brown-main);}
 <h1>Pooplendar</h1>
 <div id="counter">Aún no hay registros</div>
 
-<div id="test-controls">
-  🧪 Modo prueba:
-  <button onclick="setTestOffset(3600)">+1h</button>
-  <button onclick="setTestOffset(172800)">+2d</button>
-  <button onclick="setTestOffset(345600)">+4d</button>
-  <button onclick="setTestOffset(691200)">+8d</button>
-  <button onclick="clearTestOffset()">Reset</button>
-</div>
-
 <div id="alert"></div>
 <div id="recommendations"></div>
 
@@ -121,7 +106,6 @@ h1{text-align:center;margin:12px 0 4px;color:var(--brown-main);}
 const STORAGE_KEY = "pooplendar_events";
 let calendar;
 let selectedDay = null;
-let testOffsetSeconds = null;
 
 /* ---------- UTIL ---------- */
 const getAllEvents = () => calendar.getEvents();
@@ -169,8 +153,7 @@ function updateStatus(){
   }
 
   const last = new Date(Math.max(...evs.map(e=>e.start)));
-  const realDiff = Math.floor((Date.now()-last)/1000);
-  const diff = testOffsetSeconds ?? realDiff;
+  const diff = Math.floor((Date.now()-last)/1000);
 
   counter.innerText=`⏱️ Última vez: ${formatElapsed(diff)}`;
 
@@ -241,10 +224,6 @@ function deleteEvent(id){
   persist();
   openDayModal(selectedDay);
 }
-
-/* ---------- MODO PRUEBA ---------- */
-function setTestOffset(s){ testOffsetSeconds=s; updateStatus(); }
-function clearTestOffset(){ testOffsetSeconds=null; updateStatus(); }
 
 /* ---------- INICIO ---------- */
 document.addEventListener("DOMContentLoaded",()=>{
