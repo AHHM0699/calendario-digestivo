@@ -160,7 +160,12 @@ function openDay(dateStr) {
   });
 
   modal.style.display = "flex";
+
+  // Cerrar solo si se hace clic fuera del contenido
   modal.onclick = () => modal.style.display = "none";
+  document.getElementById("modal-content").onclick = (e) => {
+  e.stopPropagation();
+  };
 }
 </script>
 
