@@ -11,6 +11,7 @@
 :root{
   --brown-dark:#4e342e;
   --brown-main:#6d4c41;
+  --brown-soft:#a1887f;
   --brown-bg:#efe5db;
   --brown-card:#f7efe8;
   --brown-header:#e0cfc2;
@@ -36,6 +37,16 @@ h1{
   margin-bottom:4px;
 }
 
+#alert, #recommendations{
+  margin:6px 12px;
+  padding:10px;
+  border-radius:10px;
+  display:none;
+}
+
+#alert{ font-weight:600; }
+#recommendations{ background:#efe1d6; }
+
 #test-controls{
   text-align:center;
   margin-bottom:8px;
@@ -49,20 +60,8 @@ h1{
   background:#d7ccc8;
 }
 
-#alert,#recommendations{
-  margin:6px 12px;
-  padding:10px;
-  border-radius:10px;
-  display:none;
-}
-
-#recommendations{
-  background:#efe1d6;
-}
-
-#calendar{
-  padding:8px;
-}
+/* CALENDARIO */
+#calendar{ padding:8px; }
 
 .fc{
   background:var(--brown-card);
@@ -90,7 +89,7 @@ h1{
   font-size:20px;
 }
 
-/* Botón 💩 */
+/* BOTÓN 💩 */
 #poop-btn{
   position:fixed;
   bottom:20px;
@@ -104,22 +103,6 @@ h1{
   font-size:40px;
   z-index:1000;
 }
-
-/* Feedback 💩 */
-#poop-feedback{
-  position:fixed;
-  bottom:110px;
-  right:36px;
-  font-size:28px;
-  opacity:0;
-  transform:scale(0.5);
-  transition:all 0.25s ease;
-  pointer-events:none;
-}
-#poop-feedback.show{
-  opacity:1;
-  transform:scale(1);
-}
 </style>
 </head>
 
@@ -131,135 +114,146 @@ h1{
 
 <div id="test-controls">
   🧪 Modo prueba:
-  <button onclick="testBefore(172800)">+2d</button>
-  <button onclick="testBefore(259200)">+3d</button>
-  <button onclick="testBefore(604800)">+7d</button>
-  <button onclick="clearTest()">Reset</button>
+  <button onclick="setTestOffset(3600)">+1h</button>
+  <button onclick="setTestOffset(172800)">+2d</button>
+  <button onclick="setTestOffset(345600)">+4d</button>
+  <button onclick="setTestOffset(691200)">+8d</button>
+  <button onclick="clearTestOffset()">Reset</button>
 </div>
 
 <div id="alert"></div>
 <div id="recommendations"></div>
 
 <div id="calendar"></div>
-
 <button id="poop-btn">💩</button>
-<div id="poop-feedback">💩</div>
 
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
 
 <script>
-/* ================= CONFIG ================= */
 const STORAGE_KEY = "pooplendar_events";
 let events = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
 let calendar;
+
+/* ---------- MODO PRUEBA ---------- */
 let testOffsetSeconds = null;
 
-/* ================= FEEDBACK ================= */
-function poopFeedback(){
-  if(navigator.vibrate){
-    navigator.vibrate(20);
-  }
-  const fb = document.getElementById("poop-feedback");
-  fb.classList.add("show");
-  setTimeout(() => fb.classList.remove("show"), 250);
+function setTestOffset(seconds){
+  testOffsetSeconds = seconds;
+  updateStatus();
 }
 
-/* ================= MODO PRUEBA ================= */
-function testBefore(threshold){
-  testOffsetSeconds = threshold - 10; // 10 segundos antes del cambio
-  safeUpdateStatus();
-}
-
-function clearTest(){
+function clearTestOffset(){
   testOffsetSeconds = null;
-  safeUpdateStatus();
+  updateStatus();
 }
 
-/* ================= TIEMPO HUMANO ================= */
-function formatElapsed(s){
-  const m=60,h=3600,d=86400,w=d*7,mo=d*30,y=d*365;
-  if(s<h) return `${Math.floor(s/m)} min y ${s%60} seg`;
-  if(s<d) return `${Math.floor(s/h)} h y ${Math.floor((s%h)/m)} min`;
-  if(s<w) return `${Math.floor(s/d)} días y ${Math.floor((s%d)/h)} h`;
-  if(s<mo) return `${Math.floor(s/w)} sem y ${Math.floor((s%w)/d)} días`;
-  if(s<y) return `${Math.floor(s/mo)} mes y ${Math.floor((s%mo)/d)} días`;
-  return `${Math.floor(s/y)} año y ${Math.floor((s%y)/mo)} mes`;
+/* ---------- FORMATO HUMANO DEL TIEMPO ---------- */
+function formatElapsed(seconds){
+  const min=60, hour=3600, day=86400, week=day*7, month=day*30, year=day*365;
+
+  if(seconds < hour){
+    const m=Math.floor(seconds/min), s=seconds%min;
+    return `${m} minuto${m!==1?"s":""} y ${s} segundo${s!==1?"s":""}`;
+  }
+  if(seconds < day){
+    const h=Math.floor(seconds/hour), m=Math.floor((seconds%hour)/min);
+    return `${h} hora${h!==1?"s":""} y ${m} minuto${m!==1?"s":""}`;
+  }
+  if(seconds < week){
+    const d=Math.floor(seconds/day), h=Math.floor((seconds%day)/hour);
+    return `${d} día${d!==1?"s":""} y ${h} hora${h!==1?"s":""}`;
+  }
+  if(seconds < month){
+    const w=Math.floor(seconds/week), d=Math.floor((seconds%week)/day);
+    return `${w} semana${w!==1?"s":""} y ${d} día${d!==1?"s":""}`;
+  }
+  if(seconds < year){
+    const mo=Math.floor(seconds/month), d=Math.floor((seconds%month)/day);
+    return `${mo} mes${mo!==1?"es":""} y ${d} día${d!==1?"s":""}`;
+  }
+  const y=Math.floor(seconds/year);
+  const rem=seconds%year;
+  const mo=Math.floor(rem/month);
+  const d=Math.floor((rem%month)/day);
+  return `${y} año${y!==1?"s":""} y ${mo} mes${mo!==1?"es":""} y ${d} día${d!==1?"s":""}`;
 }
 
-/* ================= ESTADO (SEGURO) ================= */
-function safeUpdateStatus(){
-  try{
-    const counter = document.getElementById("counter");
-    const alertBox = document.getElementById("alert");
-    const recBox = document.getElementById("recommendations");
+/* ---------- ALERTAS Y RECOMENDACIONES ---------- */
+function getAlertLevel(sec){
+  if(sec < 172800) return null;        // <48h
+  if(sec < 259200) return "warning";   // 2–3 días
+  if(sec < 604800) return "alert";     // 3–7 días
+  return "danger";                     // >7 días
+}
 
-    if(events.length === 0){
-      counter.innerText = "Aún no hay registros";
-      alertBox.style.display = "none";
-      recBox.style.display = "none";
-      return;
-    }
+function updateStatus(){
+  const counter=document.getElementById("counter");
+  const alertBox=document.getElementById("alert");
+  const recBox=document.getElementById("recommendations");
 
-    const valid = events.filter(e => e.start && !isNaN(new Date(e.start)));
-    if(!valid.length) return;
+  if(events.length===0){
+    counter.innerText="Aún no hay registros";
+    alertBox.style.display="none";
+    recBox.style.display="none";
+    return;
+  }
 
-    const last = new Date(Math.max(...valid.map(e => new Date(e.start))));
-    const realDiff = Math.floor((Date.now() - last) / 1000);
-    const diff = testOffsetSeconds !== null ? testOffsetSeconds : realDiff;
+  const last=new Date(Math.max(...events.map(e=>new Date(e.start))));
+  const realDiff=Math.floor((Date.now()-last)/1000);
+  const diffSec=testOffsetSeconds!==null ? testOffsetSeconds : realDiff;
 
-    counter.innerText = `⏱️ Última vez: ${formatElapsed(diff)}`;
+  counter.innerText=`⏱️ Última vez: ${formatElapsed(diffSec)}`;
 
-    if(diff >= 604800){
-      alertBox.style.display = "block";
-      alertBox.innerText = "❗ Más de una semana sin evacuar.";
-      recBox.style.display = "block";
-      recBox.innerHTML = "⚠️ Consulta a un profesional de salud.";
-    } else if(diff >= 259200){
-      alertBox.style.display = "block";
-      alertBox.innerText = "🚨 Más de 3 días sin evacuar.";
-      recBox.style.display = "block";
-      recBox.innerHTML = "💧 Agua · 🥗 Fibra · 🕒 Rutina";
-    } else if(diff >= 172800){
-      alertBox.style.display = "block";
-      alertBox.innerText = "⚠️ Más de 2 días sin evacuar.";
-      recBox.style.display = "block";
-      recBox.innerHTML = "💧 Bebe más agua · 🚶 Camina";
-    } else {
-      alertBox.style.display = "none";
-      recBox.style.display = "none";
-    }
-  } catch(e){
-    /* nunca romper la app */
+  const level=getAlertLevel(diffSec);
+
+  if(!level){
+    alertBox.style.display="none";
+    recBox.style.display="none";
+    return;
+  }
+
+  alertBox.style.display="block";
+  recBox.style.display="block";
+
+  if(level==="warning"){
+    alertBox.style.background="#d7ccc8";
+    alertBox.innerText="⚠️ Han pasado más de 2 días sin evacuar.";
+    recBox.innerHTML="💧 Bebe más agua<br>🚶 Camina 10–15 minutos";
+  }
+
+  if(level==="alert"){
+    alertBox.style.background="#bcaaa4";
+    alertBox.innerText="🚨 Más de 3 días sin evacuar.";
+    recBox.innerHTML="💧 Aumenta líquidos<br>🥗 Consume fibra<br>🕒 Ve al baño después de comer";
+  }
+
+  if(level==="danger"){
+    alertBox.style.background="#8d4b43";
+    alertBox.style.color="white";
+    alertBox.innerText="❗ Más de una semana sin evacuar.";
+    recBox.innerHTML="⚠️ Consulta a un profesional de salud<br>🚫 No te automediques";
   }
 }
 
-/* ================= INICIO ================= */
-document.addEventListener("DOMContentLoaded", () => {
-
-  calendar = new FullCalendar.Calendar(document.getElementById("calendar"), {
-    initialView: "dayGridMonth",
-    locale: "es",
-    events: events
+/* ---------- INICIO ---------- */
+document.addEventListener("DOMContentLoaded",()=>{
+  calendar=new FullCalendar.Calendar(document.getElementById("calendar"),{
+    initialView:"dayGridMonth",
+    locale:"es",
+    events:events
   });
   calendar.render();
+  updateStatus();
 
-  document.getElementById("poop-btn").onclick = () => {
-    poopFeedback();
-
-    const ev = {
-      id: Date.now().toString(),
-      title: "💩",
-      start: new Date().toISOString(),
-      allDay: true
-    };
-
+  document.getElementById("poop-btn").onclick=()=>{
+    const ev={ id:crypto.randomUUID(), title:"💩", start:new Date().toISOString(), allDay:true };
     events.push(ev);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
     calendar.addEvent(ev);
+    updateStatus();
   };
 
-  safeUpdateStatus();
-  setInterval(safeUpdateStatus, 1000);
+  setInterval(updateStatus,1000);
 });
 </script>
 
