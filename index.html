@@ -261,13 +261,21 @@ document.addEventListener("DOMContentLoaded",()=>{
     events:events,
     displayEventTime:false,
 
-    eventDidMount:(info)=>{
-      const day=info.event.start.toISOString().slice(0,10);
-      const count=getEventsByDay(day).length;
-      if(count>1){
-        info.el.innerHTML=`💩 x${count}`;
-      }
-    },
+eventDidMount:(info)=>{
+  const day = info.event.start.toISOString().slice(0,10);
+  const sameDayEvents = getEventsByDay(day);
+
+  // Solo el primer evento del día se muestra
+  if(info.event.id !== sameDayEvents[0].id){
+    info.el.style.display = "none";
+    return;
+  }
+
+  // Si hay más de uno, mostrar xN
+  if(sameDayEvents.length > 1){
+    info.el.innerHTML = `💩 x${sameDayEvents.length}`;
+  }
+},
 
     dateClick:(info)=>openDayModal(info.dateStr)
   });
