@@ -25,83 +25,24 @@ body{
   color:var(--brown-dark);
 }
 
-h1{
-  text-align:center;
-  margin:12px 0 4px;
-  color:var(--brown-main);
-}
+h1{text-align:center;margin:12px 0 4px;color:var(--brown-main);}
+#counter{text-align:center;font-weight:600;}
+#alert,#recommendations{margin:6px 12px;padding:10px;border-radius:10px;display:none;}
+#recommendations{background:#efe1d6;}
 
-#counter{
-  text-align:center;
-  font-weight:600;
-  margin-bottom:4px;
-}
-
-#alert, #recommendations{
-  margin:6px 12px;
-  padding:10px;
-  border-radius:10px;
-  display:none;
-}
-
-#alert{ font-weight:600; }
-#recommendations{ background:#efe1d6; }
-
-#test-controls{
-  text-align:center;
-  margin-bottom:8px;
-}
-
+#test-controls{text-align:center;margin-bottom:8px;}
 #test-controls button{
-  margin:2px;
-  border:none;
-  padding:4px 8px;
-  border-radius:6px;
+  margin:2px;border:none;padding:4px 8px;border-radius:6px;
   background:#d7ccc8;
 }
 
-/* CALENDARIO */
-#calendar{ padding:8px; }
+#calendar{padding:8px;}
 
-.fc{
-  background:var(--brown-card);
-  border-radius:16px;
-  padding:6px;
-}
-
-.fc-col-header-cell{
-  background:var(--brown-header);
-  border:1px solid var(--brown-border);
-}
-
-.fc-daygrid-day{
-  background:var(--brown-card);
-  border:1px solid var(--brown-border);
-}
-
-.fc-day-today{
-  background:#e6d2c2 !important;
-}
-
-.fc-event{
-  background:transparent;
-  border:none;
-  font-size:20px;
-}
-
-/* BOTÓN 💩 */
 #poop-btn{
-  position:fixed;
-  bottom:20px;
-  right:20px;
-  width:72px;
-  height:72px;
-  border-radius:50%;
-  border:none;
-  background:var(--brown-main);
-  color:white;
-  font-size:40px;
-  z-index:1000;
+  position:fixed;bottom:20px;right:20px;
+  width:72px;height:72px;border-radius:50%;
+  border:none;background:var(--brown-main);
+  color:white;font-size:40px;z-index:1000;
 }
 </style>
 </head>
@@ -109,16 +50,14 @@ h1{
 <body>
 
 <h1>Pooplendar</h1>
-
 <div id="counter">Aún no hay registros</div>
 
 <div id="test-controls">
   🧪 Modo prueba:
-  <button onclick="setTestOffset(3600)">+1h</button>
-  <button onclick="setTestOffset(172800)">+2d</button>
-  <button onclick="setTestOffset(345600)">+4d</button>
-  <button onclick="setTestOffset(691200)">+8d</button>
-  <button onclick="clearTestOffset()">Reset</button>
+  <button onclick="testBefore(172800)">+2d</button>
+  <button onclick="testBefore(259200)">+3d</button>
+  <button onclick="testBefore(604800)">+7d</button>
+  <button onclick="clearTest()">Reset</button>
 </div>
 
 <div id="alert"></div>
@@ -130,68 +69,55 @@ h1{
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
 
 <script>
-const STORAGE_KEY = "pooplendar_events";
-let events = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+const STORAGE_KEY="pooplendar_events";
+const ALERT_SENT_KEY="pooplendar_alert_sent";
+
+let events=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
 let calendar;
 
-/* ---------- MODO PRUEBA ---------- */
-let testOffsetSeconds = null;
+/* -------- MODO PRUEBA -------- */
+let testOffsetSeconds=null;
 
-function setTestOffset(seconds){
-  testOffsetSeconds = seconds;
+function testBefore(threshold){
+  testOffsetSeconds = threshold - 10; // ⏱️ 10 segundos antes
   updateStatus();
 }
 
-function clearTestOffset(){
-  testOffsetSeconds = null;
+function clearTest(){
+  testOffsetSeconds=null;
   updateStatus();
 }
 
-/* ---------- FORMATO HUMANO DEL TIEMPO ---------- */
-function formatElapsed(seconds){
-  const min=60, hour=3600, day=86400, week=day*7, month=day*30, year=day*365;
+/* -------- NOTIFICACIONES -------- */
+function notifyOnce(level,msg){
+  const sent=JSON.parse(localStorage.getItem(ALERT_SENT_KEY)||"{}");
+  if(sent[level]) return;
 
-  if(seconds < hour){
-    const m=Math.floor(seconds/min), s=seconds%min;
-    return `${m} minuto${m!==1?"s":""} y ${s} segundo${s!==1?"s":""}`;
+  if(Notification.permission==="granted"){
+    new Notification("Pooplendar 💩",{ body:msg });
+    sent[level]=true;
+    localStorage.setItem(ALERT_SENT_KEY,JSON.stringify(sent));
   }
-  if(seconds < day){
-    const h=Math.floor(seconds/hour), m=Math.floor((seconds%hour)/min);
-    return `${h} hora${h!==1?"s":""} y ${m} minuto${m!==1?"s":""}`;
-  }
-  if(seconds < week){
-    const d=Math.floor(seconds/day), h=Math.floor((seconds%day)/hour);
-    return `${d} día${d!==1?"s":""} y ${h} hora${h!==1?"s":""}`;
-  }
-  if(seconds < month){
-    const w=Math.floor(seconds/week), d=Math.floor((seconds%week)/day);
-    return `${w} semana${w!==1?"s":""} y ${d} día${d!==1?"s":""}`;
-  }
-  if(seconds < year){
-    const mo=Math.floor(seconds/month), d=Math.floor((seconds%month)/day);
-    return `${mo} mes${mo!==1?"es":""} y ${d} día${d!==1?"s":""}`;
-  }
-  const y=Math.floor(seconds/year);
-  const rem=seconds%year;
-  const mo=Math.floor(rem/month);
-  const d=Math.floor((rem%month)/day);
-  return `${y} año${y!==1?"s":""} y ${mo} mes${mo!==1?"es":""} y ${d} día${d!==1?"s":""}`;
 }
 
-/* ---------- ALERTAS Y RECOMENDACIONES ---------- */
-function getAlertLevel(sec){
-  if(sec < 172800) return null;        // <48h
-  if(sec < 259200) return "warning";   // 2–3 días
-  if(sec < 604800) return "alert";     // 3–7 días
-  return "danger";                     // >7 días
+/* -------- TIEMPO HUMANO -------- */
+function formatElapsed(s){
+  const m=60,h=3600,d=86400,w=d*7,mo=d*30,y=d*365;
+  if(s<h) return `${Math.floor(s/m)} min y ${s%60} seg`;
+  if(s<d) return `${Math.floor(s/h)} h y ${Math.floor((s%h)/m)} min`;
+  if(s<w) return `${Math.floor(s/d)} días y ${Math.floor((s%d)/h)} h`;
+  if(s<mo) return `${Math.floor(s/w)} sem y ${Math.floor((s%w)/d)} días`;
+  if(s<y) return `${Math.floor(s/mo)} mes y ${Math.floor((s%mo)/d)} días`;
+  return `${Math.floor(s/y)} año y ${Math.floor((s%y)/mo)} mes`;
 }
 
+/* -------- ALERTAS -------- */
 function updateStatus(){
   const counter=document.getElementById("counter");
   const alertBox=document.getElementById("alert");
   const recBox=document.getElementById("recommendations");
 
-  if(events.length===0){
+  if(!events.length){
     counter.innerText="Aún no hay registros";
     alertBox.style.display="none";
     recBox.style.display="none";
@@ -200,43 +126,40 @@ function updateStatus(){
 
   const last=new Date(Math.max(...events.map(e=>new Date(e.start))));
   const realDiff=Math.floor((Date.now()-last)/1000);
-  const diffSec=testOffsetSeconds!==null ? testOffsetSeconds : realDiff;
+  const diff=testOffsetSeconds!==null ? testOffsetSeconds : realDiff;
 
-  counter.innerText=`⏱️ Última vez: ${formatElapsed(diffSec)}`;
+  counter.innerText=`⏱️ Última vez: ${formatElapsed(diff)}`;
 
-  const level=getAlertLevel(diffSec);
-
-  if(!level){
+  if(diff>=604800){
+    alertBox.style.display="block";
+    alertBox.innerText="❗ Más de una semana sin evacuar.";
+    recBox.style.display="block";
+    recBox.innerHTML="⚠️ Consulta a un profesional de salud.";
+    notifyOnce("danger","Más de una semana sin evacuar. Consulta a un profesional.");
+  } else if(diff>=259200){
+    alertBox.style.display="block";
+    alertBox.innerText="🚨 Más de 3 días sin evacuar.";
+    recBox.style.display="block";
+    recBox.innerHTML="💧 Agua · 🥗 Fibra · 🕒 Rutina";
+    notifyOnce("alert","Más de 3 días sin evacuar.");
+  } else if(diff>=172800){
+    alertBox.style.display="block";
+    alertBox.innerText="⚠️ Más de 2 días sin evacuar.";
+    recBox.style.display="block";
+    recBox.innerHTML="💧 Bebe más agua · 🚶 Camina";
+    notifyOnce("warning","Han pasado más de 2 días sin evacuar.");
+  } else {
     alertBox.style.display="none";
     recBox.style.display="none";
-    return;
-  }
-
-  alertBox.style.display="block";
-  recBox.style.display="block";
-
-  if(level==="warning"){
-    alertBox.style.background="#d7ccc8";
-    alertBox.innerText="⚠️ Han pasado más de 2 días sin evacuar.";
-    recBox.innerHTML="💧 Bebe más agua<br>🚶 Camina 10–15 minutos";
-  }
-
-  if(level==="alert"){
-    alertBox.style.background="#bcaaa4";
-    alertBox.innerText="🚨 Más de 3 días sin evacuar.";
-    recBox.innerHTML="💧 Aumenta líquidos<br>🥗 Consume fibra<br>🕒 Ve al baño después de comer";
-  }
-
-  if(level==="danger"){
-    alertBox.style.background="#8d4b43";
-    alertBox.style.color="white";
-    alertBox.innerText="❗ Más de una semana sin evacuar.";
-    recBox.innerHTML="⚠️ Consulta a un profesional de salud<br>🚫 No te automediques";
   }
 }
 
-/* ---------- INICIO ---------- */
+/* -------- INICIO -------- */
 document.addEventListener("DOMContentLoaded",()=>{
+  if(Notification.permission!=="granted"){
+    Notification.requestPermission();
+  }
+
   calendar=new FullCalendar.Calendar(document.getElementById("calendar"),{
     initialView:"dayGridMonth",
     locale:"es",
@@ -246,9 +169,10 @@ document.addEventListener("DOMContentLoaded",()=>{
   updateStatus();
 
   document.getElementById("poop-btn").onclick=()=>{
-    const ev={ id:crypto.randomUUID(), title:"💩", start:new Date().toISOString(), allDay:true };
+    const ev={id:crypto.randomUUID(),title:"💩",start:new Date().toISOString(),allDay:true};
     events.push(ev);
     localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
+    localStorage.removeItem(ALERT_SENT_KEY);
     calendar.addEvent(ev);
     updateStatus();
   };
