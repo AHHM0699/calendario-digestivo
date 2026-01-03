@@ -42,69 +42,86 @@ def register_event():
 st.title("Pooplendar")
 st.caption("Registro simple y rápido")
 
-# ---------- ESTILOS ----------
+# ---------------- 💩 BOTÓN REAL ----------------
 st.markdown(
     """
     <style>
-    /* Oculta el texto del botón pero mantiene el área clickeable */
     .poop-btn button {
-        font-size: 0px;
+        font-size: 64px;
         height: 110px;
         width: 110px;
         border-radius: 24px;
-    }
-    .poop-emoji {
-        font-size: 90px;
-        text-align: center;
-        margin-top: -95px;
-        pointer-events: none;
+        margin: auto;
+        display: block;
     }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# ---------- BOTÓN 💩 VISUAL ----------
-c1, c2, c3 = st.columns([1,2,1])
-with c2:
-    st.markdown('<div class="poop-btn">', unsafe_allow_html=True)
-    clicked = st.button("register_poop", key="poop_register")
-    st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown('<div class="poop-emoji">💩</div>', unsafe_allow_html=True)
-
-if clicked:
+st.markdown('<div class="poop-btn">', unsafe_allow_html=True)
+if st.button("💩"):
     register_event()
+st.markdown('</div>', unsafe_allow_html=True)
 
 st.divider()
 
-# ---------------- CALENDARIO ----------------
+# ---------------- CALENDARIO MOBILE-FIRST ----------------
 today = date.today()
 year, month = today.year, today.month
-cal = calendar.monthcalendar(year, month)
+month_calendar = calendar.monthcalendar(year, month)
 
 st.subheader(f"{calendar.month_name[month]} {year}")
 
-days_header = ["L", "M", "X", "J", "V", "S", "D"]
-cols = st.columns(7)
-for i, d in enumerate(days_header):
-    cols[i].markdown(f"**{d}**")
+# Días de la semana
+st.markdown(
+    """
+    <div style="display:grid; grid-template-columns: repeat(7, 1fr); text-align:center; font-weight:bold;">
+        <div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+# CSS de la grilla
+st.markdown(
+    """
+    <style>
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 6px;
+        margin-top: 6px;
+    }
+    .calendar-grid button {
+        height: 52px;
+        border-radius: 12px;
+        padding: 0;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 selected_day = None
 
-for week in cal:
-    cols = st.columns(7)
-    for i, day in enumerate(week):
+st.markdown('<div class="calendar-grid">', unsafe_allow_html=True)
+
+for week in month_calendar:
+    for day in week:
         if day == 0:
-            cols[i].markdown(" ")
-            continue
+            st.markdown("<div></div>", unsafe_allow_html=True)
+        else:
+            d_str = date(year, month, day).isoformat()
+            count = len(data.get(d_str, []))
+            label = f"{day}"
+            if count > 0:
+                label += "💩" * min(count, 3)
 
-        d_str = date(year, month, day).isoformat()
-        count = len(data.get(d_str, []))
-        dots = "💩" * count
-        label = f"{day}\n{dots}"
+            if st.button(label, key=d_str):
+                selected_day = d_str
 
-        if cols[i].button(label, key=d_str):
-            selected_day = d_str
+st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------- DETALLE DEL DÍA ----------------
 if selected_day:
