@@ -1,7 +1,6 @@
 import streamlit as st
 import json
 from datetime import datetime, date
-import calendar
 from pathlib import Path
 
 # ---------------- CONFIG ----------------
@@ -42,11 +41,11 @@ def register_event():
 st.title("Pooplendar")
 st.caption("Registro simple y rápido")
 
-# ---------------- 💩 BOTÓN REAL ----------------
+# 💩 BOTÓN GRANDE REAL
 st.markdown(
     """
     <style>
-    .poop-btn button {
+    .stButton > button {
         font-size: 64px;
         height: 110px;
         width: 110px;
@@ -59,92 +58,64 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.markdown('<div class="poop-btn">', unsafe_allow_html=True)
 if st.button("💩"):
     register_event()
-st.markdown('</div>', unsafe_allow_html=True)
 
 st.divider()
 
-# ---------------- CALENDARIO MOBILE-FIRST ----------------
-today = date.today()
-year, month = today.year, today.month
-month_calendar = calendar.monthcalendar(year, month)
+# ---------------- CALENDARIO MENSUAL NATIVO ----------------
+st.subheader("📅 Calendario")
 
-st.subheader(f"{calendar.month_name[month]} {year}")
-
-# Días de la semana
-st.markdown(
-    """
-    <div style="display:grid; grid-template-columns: repeat(7, 1fr); text-align:center; font-weight:bold;">
-        <div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div>
-    </div>
-    """,
-    unsafe_allow_html=True
+selected_date = st.date_input(
+    "Selecciona un día",
+    value=date.today()
 )
 
-# CSS de la grilla
-st.markdown(
-    """
-    <style>
-    .calendar-grid {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 6px;
-        margin-top: 6px;
-    }
-    .calendar-grid button {
-        height: 52px;
-        border-radius: 12px;
-        padding: 0;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+selected_day = selected_date.isoformat()
+selected_year = selected_date.year
+selected_month = selected_date.month
 
-selected_day = None
+# ---------------- RESUMEN VISUAL DEL MES ----------------
+st.subheader("🟤 Resumen del mes")
 
-st.markdown('<div class="calendar-grid">', unsafe_allow_html=True)
+month_days = {
+    d: len(events)
+    for d, events in data.items()
+    if date.fromisoformat(d).year == selected_year
+    and date.fromisoformat(d).month == selected_month
+}
 
-for week in month_calendar:
-    for day in week:
-        if day == 0:
-            st.markdown("<div></div>", unsafe_allow_html=True)
-        else:
-            d_str = date(year, month, day).isoformat()
-            count = len(data.get(d_str, []))
-            label = f"{day}"
-            if count > 0:
-                label += "💩" * min(count, 3)
+if not month_days:
+    st.info("No hay registros este mes.")
+else:
+    for d in sorted(month_days):
+        day_num = int(d.split("-")[2])
+        count = month_days[d]
+        dots = "💩" * min(count, 5)
+        st.markdown(f"**Día {day_num}** {dots}")
 
-            if st.button(label, key=d_str):
-                selected_day = d_str
-
-st.markdown('</div>', unsafe_allow_html=True)
+st.divider()
 
 # ---------------- DETALLE DEL DÍA ----------------
-if selected_day:
-    st.divider()
-    st.subheader(f"📅 {selected_day}")
+st.subheader(f"Registros del {selected_date.strftime('%d/%m/%Y')}")
 
-    events = data.get(selected_day, [])
+events = data.get(selected_day, [])
 
-    if not events:
-        st.info("No hay registros este día.")
-    else:
-        for i, ev in enumerate(events):
-            with st.expander(f"🕒 {ev['time']}"):
-                ev["notes"] = st.text_area(
-                    "Notas (opcional)",
-                    ev["notes"],
-                    key=f"{selected_day}_{i}_notes"
-                )
+if not events:
+    st.info("No hay registros este día.")
+else:
+    for i, ev in enumerate(events):
+        with st.expander(f"🕒 {ev['time']}"):
+            ev["notes"] = st.text_area(
+                "Notas (opcional)",
+                ev["notes"],
+                key=f"{selected_day}_{i}_notes"
+            )
 
-                if st.button(
-                    "🗑️ Eliminar registro",
-                    key=f"del_{selected_day}_{i}"
-                ):
-                    events.pop(i)
-                    save_data(data)
-                    st.experimental_rerun()
+            if st.button(
+                "🗑️ Eliminar registro",
+                key=f"del_{selected_day}_{i}"
+            ):
+                events.pop(i)
+                save_data(data)
+                st.experimental_rerun()
