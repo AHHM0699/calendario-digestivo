@@ -239,7 +239,6 @@ function deleteEvent(id){
   const ev = calendar.getEventById(id);
   if(ev) ev.remove();
   persist();
-  calendar.rerenderEvents(); // 👈 AQUÍ TAMBIÉN
   openDayModal(selectedDay);
 }
 
@@ -277,16 +276,15 @@ document.addEventListener("DOMContentLoaded",()=>{
   updateStatus();
 
   document.getElementById("poop-btn").onclick=()=>{
-  calendar.addEvent({
-    id:crypto.randomUUID(),
-    title:"💩",
-    start:new Date(),
-    notes:""
-  });
-  persist();
-  calendar.rerenderEvents(); // 👈 ESTA ES LA CLAVE
-  updateStatus();
-};
+    calendar.addEvent({
+      id:crypto.randomUUID(),
+      title:"💩",
+      start:new Date(),
+      notes:""
+    });
+    persist();
+    updateStatus();
+  };
 
   setInterval(updateStatus,1000);
 });
