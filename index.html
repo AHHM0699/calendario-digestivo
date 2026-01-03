@@ -41,6 +41,12 @@
       box-shadow: 0 4px 10px rgba(0,0,0,0.2);
       cursor: pointer;
     }
+
+    /* Eventos más grandes para móvil */
+    .fc-event-title {
+      font-size: 18px;
+      text-align: center;
+    }
   </style>
 </head>
 
@@ -55,25 +61,45 @@
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
 
   <script>
+    const STORAGE_KEY = 'pooplendar_events';
+
+    function loadEvents() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    }
+
+    function saveEvents(events) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
       const calendarEl = document.getElementById('calendar');
+
+      let events = loadEvents();
 
       const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         locale: 'es',
         height: 'auto',
-        events: []
+        events: events,
+        eventDisplay: 'block'
       });
 
       calendar.render();
 
       document.getElementById('poop-btn').addEventListener('click', () => {
         const now = new Date();
-        calendar.addEvent({
+
+        const newEvent = {
           title: '💩',
-          start: now,
+          start: now.toISOString().split('T')[0],
           allDay: true
-        });
+        };
+
+        events.push(newEvent);
+        saveEvents(events);
+
+        calendar.addEvent(newEvent);
       });
     });
   </script>
