@@ -216,12 +216,15 @@ function openDayModal(dateStr){
   list.forEach(ev=>{
     const t=ev.start.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
     html+=`
-      <div class="day-item">
-        <strong>💩 ${t}</strong><br>
-        <small>${ev.extendedProps.notes||"Sin notas"}</small><br>
-        <button onclick="deleteById('${ev.id}')">🗑️ Eliminar</button>
-      </div>
-    `;
+  <div class="day-item">
+    <strong>💩 ${t}</strong><br>
+    <textarea
+      placeholder="Notas…"
+      onblur="saveNote('${ev.id}', this.value)"
+    >${ev.extendedProps.notes||""}</textarea><br>
+    <button onclick="deleteById('${ev.id}')">🗑️ Eliminar</button>
+  </div>
+`;
   });
 
   html+=`<button onclick="closeModal()">Cerrar</button>`;
@@ -238,6 +241,12 @@ function deleteById(id){
   if(ev) ev.remove();
   persistEvents();
   openDayModal(selectedDay);
+  
+function saveNote(id, text){
+  const ev = calendar.getEventById(id);
+  if(!ev) return;
+  ev.setExtendedProp("notes", text);
+  persistEvents();
 }
 
 /* ===== PERSISTENCIA ===== */
