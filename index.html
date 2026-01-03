@@ -1,107 +1,168 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pooplendar 💩</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pooplendar 💩</title>
 
-  <!-- FullCalendar -->
-  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
 
-  <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      margin: 0;
-      padding: 0;
-      background: #ffffff;
-    }
+<style>
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  margin: 0;
+  background: #fff;
+}
 
-    h1 {
-      text-align: center;
-      margin: 16px 0 8px;
-    }
+h1 {
+  text-align: center;
+  margin: 12px 0;
+}
 
-    #calendar {
-      max-width: 100%;
-      margin: 0 auto;
-      padding: 8px;
-    }
+#calendar {
+  padding: 8px;
+}
 
-    /* Botón 💩 flotante */
-    #poop-btn {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 72px;
-      height: 72px;
-      font-size: 40px;
-      border-radius: 50%;
-      border: none;
-      background: #f5f5f5;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-      cursor: pointer;
-    }
+#poop-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 72px;
+  height: 72px;
+  font-size: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #f5f5f5;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
 
-    /* Eventos más grandes para móvil */
-    .fc-event-title {
-      font-size: 18px;
-      text-align: center;
-    }
-  </style>
+#modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+#modal-content {
+  background: white;
+  width: 90%;
+  max-height: 80%;
+  border-radius: 12px;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.entry {
+  border-bottom: 1px solid #ddd;
+  padding: 8px 0;
+}
+
+textarea {
+  width: 100%;
+  margin-top: 6px;
+}
+
+button.delete {
+  margin-top: 6px;
+  background: none;
+  border: none;
+  color: red;
+}
+</style>
 </head>
 
 <body>
-  <h1>Pooplendar</h1>
 
-  <div id="calendar"></div>
+<h1>Pooplendar</h1>
+<div id="calendar"></div>
+<button id="poop-btn">💩</button>
 
-  <button id="poop-btn">💩</button>
+<div id="modal">
+  <div id="modal-content"></div>
+</div>
 
-  <!-- FullCalendar JS -->
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
 
-  <script>
-    const STORAGE_KEY = 'pooplendar_events';
+<script>
+const STORAGE_KEY = "pooplendar_events";
 
-    function loadEvents() {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
+function loadEvents() {
+  return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+}
+
+function saveEvents(events) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+}
+
+let events = loadEvents();
+
+document.addEventListener("DOMContentLoaded", () => {
+  const calendar = new FullCalendar.Calendar(document.getElementById("calendar"), {
+    initialView: "dayGridMonth",
+    locale: "es",
+    events: events,
+    dateClick(info) {
+      openDay(info.dateStr);
     }
+  });
 
-    function saveEvents(events) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
-    }
+  calendar.render();
 
-    document.addEventListener('DOMContentLoaded', function () {
-      const calendarEl = document.getElementById('calendar');
+  document.getElementById("poop-btn").onclick = () => {
+    const now = new Date();
+    const event = {
+      id: crypto.randomUUID(),
+      title: "💩",
+      start: now.toISOString(),
+      allDay: true,
+      notes: ""
+    };
+    events.push(event);
+    saveEvents(events);
+    calendar.addEvent(event);
+  };
+});
 
-      let events = loadEvents();
+function openDay(dateStr) {
+  const modal = document.getElementById("modal");
+  const box = document.getElementById("modal-content");
+  box.innerHTML = `<h3>${dateStr}</h3>`;
 
-      const calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        locale: 'es',
-        height: 'auto',
-        events: events,
-        eventDisplay: 'block'
-      });
+  const dayEvents = events.filter(e => e.start.startsWith(dateStr));
 
-      calendar.render();
+  if (!dayEvents.length) {
+    box.innerHTML += "<p>No hay registros.</p>";
+  }
 
-      document.getElementById('poop-btn').addEventListener('click', () => {
-        const now = new Date();
+  dayEvents.forEach(e => {
+    const div = document.createElement("div");
+    div.className = "entry";
+    div.innerHTML = `
+      <strong>${new Date(e.start).toLocaleTimeString()}</strong>
+      <textarea placeholder="Notas...">${e.notes || ""}</textarea>
+      <button class="delete">🗑️ Eliminar</button>
+    `;
 
-        const newEvent = {
-          title: '💩',
-          start: now.toISOString().split('T')[0],
-          allDay: true
-        };
+    div.querySelector("textarea").onchange = ev => {
+      e.notes = ev.target.value;
+      saveEvents(events);
+    };
 
-        events.push(newEvent);
-        saveEvents(events);
+    div.querySelector(".delete").onclick = () => {
+      events = events.filter(x => x.id !== e.id);
+      saveEvents(events);
+      location.reload();
+    };
 
-        calendar.addEvent(newEvent);
-      });
-    });
-  </script>
+    box.appendChild(div);
+  });
+
+  modal.style.display = "flex";
+  modal.onclick = () => modal.style.display = "none";
+}
+</script>
+
 </body>
 </html>
