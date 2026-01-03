@@ -27,14 +27,19 @@ body{
 
 h1{
   text-align:center;
-  margin:12px 0;
+  margin:12px 0 4px;
   color:var(--brown-main);
 }
 
-/* ---------- CALENDARIO ---------- */
-#calendar{
-  padding:8px;
+#counter{
+  text-align:center;
+  font-size:16px;
+  margin-bottom:8px;
+  font-weight:600;
 }
+
+/* ---------- CALENDARIO ---------- */
+#calendar{ padding:8px; }
 
 .fc{
   background:var(--brown-card);
@@ -42,9 +47,7 @@ h1{
   padding:6px;
 }
 
-.fc-toolbar-title{
-  color:var(--brown-main);
-}
+.fc-toolbar-title{ color:var(--brown-main); }
 
 .fc-col-header-cell{
   background:var(--brown-header);
@@ -63,9 +66,7 @@ h1{
   font-weight:600;
 }
 
-.fc-day-today{
-  background:#e6d2c2 !important;
-}
+.fc-day-today{ background:#e6d2c2 !important; }
 
 .fc-event{
   background:transparent;
@@ -87,7 +88,7 @@ h1{
   color:white;
   font-size:40px;
   box-shadow:0 4px 12px rgba(78,52,46,.45);
-  z-index:1000; /* CLAVE */
+  z-index:1000;
 }
 
 /* ---------- MODAL ---------- */
@@ -98,7 +99,7 @@ h1{
   display:none;
   align-items:center;
   justify-content:center;
-  z-index:2000; /* CLAVE */
+  z-index:2000;
 }
 
 #modal-content{
@@ -108,25 +109,12 @@ h1{
   border-radius:16px;
   padding:16px;
   overflow-y:auto;
-  box-shadow:0 6px 20px rgba(78,52,46,.4);
 }
 
 .modal-header{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  margin-bottom:8px;
-}
-
-.modal-header h3{
-  margin:0;
-}
-
-button.close{
-  background:none;
-  border:none;
-  font-size:18px;
-  color:var(--brown-main);
 }
 
 .entry{
@@ -140,11 +128,9 @@ textarea{
   border-radius:8px;
   border:1px solid var(--brown-soft);
   padding:6px;
-  font-size:14px;
 }
 
-button.delete{
-  margin-top:6px;
+button.delete, button.close{
   background:none;
   border:none;
   color:var(--brown-main);
@@ -156,14 +142,12 @@ button.delete{
 <body>
 
 <h1>Pooplendar</h1>
+<div id="counter">Aún no hay registros</div>
 
 <div id="calendar"></div>
-
 <button id="poop-btn">💩</button>
 
-<div id="modal">
-  <div id="modal-content"></div>
-</div>
+<div id="modal"><div id="modal-content"></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
 
@@ -180,17 +164,69 @@ function saveEvents(e){
 let events=loadEvents();
 let calendar;
 
+/* ---------- CONTADOR ---------- */
+function updateCounter(){
+  if(events.length===0){
+    document.getElementById("counter").innerText="Aún no hay registros";
+    return;
+  }
+
+  const last = new Date(Math.max(...events.map(e=>new Date(e.start))));
+  const now = new Date();
+  let diff = Math.floor((now - last)/1000);
+
+  const min = 60;
+  const hour = 3600;
+  const day = 86400;
+  const week = day*7;
+  const month = day*30;
+  const year = day*365;
+
+  let text="";
+
+  if(diff < hour){
+    const m=Math.floor(diff/min);
+    const s=diff%60;
+    text=`${m} minuto${m!==1?"s":""} y ${s} segundo${s!==1?"s":""}`;
+  } else if(diff < day){
+    const h=Math.floor(diff/hour);
+    const m=Math.floor((diff%hour)/min);
+    text=`${h} hora${h!==1?"s":""} y ${m} minuto${m!==1?"s":""}`;
+  } else if(diff < week){
+    const d=Math.floor(diff/day);
+    const h=Math.floor((diff%day)/hour);
+    text=`${d} día${d!==1?"s":""} y ${h} hora${h!==1?"s":""}`;
+  } else if(diff < month){
+    const w=Math.floor(diff/week);
+    const d=Math.floor((diff%week)/day);
+    text=`${w} semana${w!==1?"s":""} y ${d} día${d!==1?"s":""}`;
+  } else if(diff < year){
+    const mo=Math.floor(diff/month);
+    const d=Math.floor((diff%month)/day);
+    text=`${mo} mes${mo!==1?"es":""} y ${d} día${d!==1?"s":""}`;
+  } else {
+    const y=Math.floor(diff/year);
+    const rem=diff%year;
+    const mo=Math.floor(rem/month);
+    const d=Math.floor((rem%month)/day);
+    text=`${y} año${y!==1?"s":""} y ${mo} mes${mo!==1?"es":""} y ${d} día${d!==1?"s":""}`;
+  }
+
+  document.getElementById("counter").innerText=`⏱️ Última vez: ${text}`;
+}
+
+setInterval(updateCounter,1000);
+
+/* ---------- CALENDARIO ---------- */
 document.addEventListener("DOMContentLoaded",()=>{
   calendar=new FullCalendar.Calendar(document.getElementById("calendar"),{
     initialView:"dayGridMonth",
     locale:"es",
-    height:"auto",
     events:events,
-    dateClick(info){
-      openDay(info.dateStr);
-    }
+    dateClick(info){ openDay(info.dateStr); }
   });
   calendar.render();
+  updateCounter();
 
   document.getElementById("poop-btn").onclick=()=>{
     const now=new Date();
@@ -204,44 +240,34 @@ document.addEventListener("DOMContentLoaded",()=>{
     events.push(ev);
     saveEvents(events);
     calendar.addEvent(ev);
+    updateCounter();
   };
 });
 
 function openDay(dateStr){
   const modal=document.getElementById("modal");
   const box=document.getElementById("modal-content");
-
-  box.innerHTML=`
-    <div class="modal-header">
-      <h3>${dateStr}</h3>
-      <button class="close">Cerrar</button>
-    </div>
-  `;
+  box.innerHTML=`<div class="modal-header"><h3>${dateStr}</h3><button class="close">Cerrar</button></div>`;
 
   const dayEvents=events.filter(e=>e.start.startsWith(dateStr));
-  if(!dayEvents.length){
-    box.innerHTML+=`<p>No hay registros.</p>`;
-  }
+  if(!dayEvents.length) box.innerHTML+=`<p>No hay registros.</p>`;
 
   dayEvents.forEach(e=>{
     const div=document.createElement("div");
     div.className="entry";
     div.innerHTML=`
       <strong>${new Date(e.start).toLocaleTimeString()}</strong>
-      <textarea placeholder="Notas...">${e.notes||""}</textarea>
+      <textarea>${e.notes||""}</textarea>
       <button class="delete">🗑️ Eliminar</button>
     `;
 
-    div.querySelector("textarea").onchange=ev=>{
-      e.notes=ev.target.value;
-      saveEvents(events);
-    };
-
+    div.querySelector("textarea").onchange=ev=>{ e.notes=ev.target.value; saveEvents(events); };
     div.querySelector(".delete").onclick=()=>{
       events=events.filter(x=>x.id!==e.id);
       saveEvents(events);
       calendar.getEventById(e.id).remove();
       modal.style.display="none";
+      updateCounter();
     };
 
     box.appendChild(div);
