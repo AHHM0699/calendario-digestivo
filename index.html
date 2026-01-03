@@ -55,8 +55,11 @@ h1{text-align:center;margin:12px 0 4px;color:var(--brown-main);}
   border:1px solid var(--brown-border);
 }
 .fc-day-today{background:#e6d2c2 !important;}
-.fc-event{background:transparent;border:none;font-size:18px;}
+.fc-event{
+  background:transparent;border:none;font-size:18px;
+}
 
+/* Botón 💩 */
 #poop-btn{
   position:fixed;bottom:20px;right:20px;
   width:72px;height:72px;border-radius:50%;
@@ -64,6 +67,7 @@ h1{text-align:center;margin:12px 0 4px;color:var(--brown-main);}
   color:white;font-size:40px;z-index:1000;
 }
 
+/* MODAL */
 #modal{
   position:fixed;inset:0;
   background:rgba(0,0,0,.4);
@@ -72,13 +76,19 @@ h1{text-align:center;margin:12px 0 4px;color:var(--brown-main);}
 }
 #modal-content{
   background:#f7efe8;
-  padding:16px;border-radius:14px;
+  padding:16px;
+  border-radius:14px;
   width:90%;max-width:380px;
 }
 .day-item{
   background:#efe1d6;
   border-radius:8px;
-  padding:8px;margin-bottom:8px;
+  padding:8px;
+  margin-bottom:8px;
+}
+.day-item textarea{
+  width:100%;
+  margin-top:4px;
 }
 </style>
 </head>
@@ -103,66 +113,110 @@ h1{text-align:center;margin:12px 0 4px;color:var(--brown-main);}
 <div id="calendar"></div>
 <button id="poop-btn">💩</button>
 
-<div id="modal">
-  <div id="modal-content"></div>
-</div>
+<div id="modal"><div id="modal-content"></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
 
 <script>
-const STORAGE_KEY="pooplendar_events";
-let events=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
+const STORAGE_KEY = "pooplendar_events";
 let calendar;
-let selectedDay=null;
+let selectedDay = null;
+let testOffsetSeconds = null;
 
-/* ===== MODO PRUEBA ===== */
-let testOffsetSeconds=null;
-function setTestOffset(sec){testOffsetSeconds=sec;updateStatus();}
-function clearTestOffset(){testOffsetSeconds=null;updateStatus();}
+/* ---------- UTIL ---------- */
+const getAllEvents = () => calendar.getEvents();
 
-/* ===== TIEMPO ===== */
-function formatElapsed(seconds){
-  const m=60,h=3600,d=86400,w=d*7,mo=d*30,y=d*365;
-  if(seconds<h)return`${Math.floor(seconds/m)} min y ${seconds%60} seg`;
-  if(seconds<d)return`${Math.floor(seconds/h)} h y ${Math.floor((seconds%h)/m)} min`;
-  if(seconds<w)return`${Math.floor(seconds/d)} días y ${Math.floor((seconds%d)/h)} h`;
-  if(seconds<mo)return`${Math.floor(seconds/w)} sem y ${Math.floor((seconds%w)/d)} días`;
-  if(seconds<y)return`${Math.floor(seconds/mo)} mes y ${Math.floor((seconds%mo)/d)} días`;
-  return`${Math.floor(seconds/y)} año y ${Math.floor((seconds%y)/mo)} mes`;
+function persist(){
+  const data = getAllEvents().map(e=>({
+    id:e.id,
+    title:e.title,
+    start:e.start.toISOString(),
+    notes:e.extendedProps.notes||""
+  }));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
+/* ---------- TIEMPO ---------- */
+function formatElapsed(sec){
+  const m=60,h=3600,d=86400,w=d*7,mo=d*30,y=d*365;
+  if(sec<h) return `${Math.floor(sec/m)} min y ${sec%60} seg`;
+  if(sec<d) return `${Math.floor(sec/h)} h y ${Math.floor((sec%h)/m)} min`;
+  if(sec<w) return `${Math.floor(sec/d)} días y ${Math.floor((sec%d)/h)} h`;
+  if(sec<mo) return `${Math.floor(sec/w)} sem y ${Math.floor((sec%w)/d)} días`;
+  if(sec<y) return `${Math.floor(sec/mo)} mes y ${Math.floor((sec%mo)/d)} días`;
+  return `${Math.floor(sec/y)} año y ${Math.floor((sec%y)/mo)} mes`;
+}
+
+/* ---------- ALERTAS ---------- */
 function getAlertLevel(sec){
-  if(sec<172800)return null;
-  if(sec<259200)return"warning";
-  if(sec<604800)return"alert";
-  return"danger";
+  if(sec<172800) return null;
+  if(sec<259200) return "warning";
+  if(sec<604800) return "alert";
+  return "danger";
 }
 
 function updateStatus(){
   const counter=document.getElementById("counter");
-  if(events.length===0){
+  const alertBox=document.getElementById("alert");
+  const recBox=document.getElementById("recommendations");
+
+  const evs = getAllEvents();
+  if(evs.length===0){
     counter.innerText="Aún no hay registros";
+    alertBox.style.display="none";
+    recBox.style.display="none";
     return;
   }
-  const last=new Date(Math.max(...events.map(e=>new Date(e.start))));
-  const diff=testOffsetSeconds ?? Math.floor((Date.now()-last)/1000);
+
+  const last = new Date(Math.max(...evs.map(e=>e.start)));
+  const realDiff = Math.floor((Date.now()-last)/1000);
+  const diff = testOffsetSeconds ?? realDiff;
+
   counter.innerText=`⏱️ Última vez: ${formatElapsed(diff)}`;
+
+  const level=getAlertLevel(diff);
+  if(!level){
+    alertBox.style.display="none";
+    recBox.style.display="none";
+    return;
+  }
+
+  alertBox.style.display="block";
+  recBox.style.display="block";
+
+  if(level==="warning"){
+    alertBox.innerText="⚠️ Han pasado más de 2 días sin evacuar.";
+    recBox.innerHTML="💧 Bebe más agua<br>🚶 Camina";
+  }
+  if(level==="alert"){
+    alertBox.innerText="🚨 Más de 3 días sin evacuar.";
+    recBox.innerHTML="🥗 Fibra<br>💧 Líquidos";
+  }
+  if(level==="danger"){
+    alertBox.innerText="❗ Más de una semana sin evacuar.";
+    recBox.innerHTML="⚠️ Consulta a un profesional de salud";
+  }
 }
 
-/* ===== MODAL ===== */
+/* ---------- MODAL ---------- */
 function openDayModal(dateStr){
   selectedDay=dateStr;
-  const list=calendar.getEvents().filter(e=>e.start.toISOString().slice(0,10)===dateStr);
   const box=document.getElementById("modal-content");
+  const list = getAllEvents()
+    .filter(e=>e.start.toISOString().slice(0,10)===dateStr)
+    .sort((a,b)=>a.start-b.start);
+
   let html=`<h3>${new Date(dateStr).toLocaleDateString()}</h3>`;
 
+  if(list.length===0) html+=`<p>No hay registros.</p>`;
+
   list.forEach(ev=>{
-    const t=new Date(ev.start).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    const t=ev.start.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
     html+=`
       <div class="day-item">
-        <strong>💩 ${t}</strong><br>
-        <textarea onblur="saveNote('${ev.id}',this.value)">${ev.extendedProps.notes||""}</textarea><br>
-        <button onclick="deleteById('${ev.id}')">🗑️ Eliminar</button>
+        <strong>💩 ${t}</strong>
+        <textarea onblur="saveNote('${ev.id}',this.value)">${ev.extendedProps.notes||""}</textarea>
+        <button onclick="deleteEvent('${ev.id}')">🗑️ Eliminar</button>
       </div>
     `;
   });
@@ -176,46 +230,46 @@ function closeModal(){
   document.getElementById("modal").style.display="none";
 }
 
-function deleteById(id){
-  const ev=calendar.getEventById(id);
+function saveNote(id,text){
+  const ev = calendar.getEventById(id);
+  if(ev){ ev.setExtendedProp("notes",text); persist(); }
+}
+
+function deleteEvent(id){
+  const ev = calendar.getEventById(id);
   if(ev) ev.remove();
-  persistEvents();
+  persist();
   openDayModal(selectedDay);
 }
 
-function saveNote(id,text){
-  const ev=calendar.getEventById(id);
-  if(!ev)return;
-  ev.setExtendedProp("notes",text);
-  persistEvents();
-}
+/* ---------- MODO PRUEBA ---------- */
+function setTestOffset(s){ testOffsetSeconds=s; updateStatus(); }
+function clearTestOffset(){ testOffsetSeconds=null; updateStatus(); }
 
-/* ===== PERSISTENCIA ===== */
-function persistEvents(){
-  events=calendar.getEvents().map(e=>({
-    id:e.id,title:e.title,start:e.start.toISOString(),
-    allDay:false,notes:e.extendedProps.notes||""
-  }));
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
-  updateStatus();
-}
-
-/* ===== INICIO ===== */
+/* ---------- INICIO ---------- */
 document.addEventListener("DOMContentLoaded",()=>{
-  calendar=new FullCalendar.Calendar(document.getElementById("calendar"),{
+  const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
+
+  calendar = new FullCalendar.Calendar(document.getElementById("calendar"),{
     initialView:"dayGridMonth",
     locale:"es",
-    events:events,
     displayEventTime:false,
-
+    events:saved,
+    dateClick:(info)=>openDayModal(info.dateStr),
     eventDidMount:(info)=>{
-      const day=info.event.start.toISOString().slice(0,10);
-      const same=calendar.getEvents().filter(e=>e.start.toISOString().slice(0,10)===day);
-      if(info.event.id!==same[0].id) info.el.style.display="none";
-      if(same.length>1) info.el.innerHTML=`💩 x${same.length}`;
-    },
+      const day = info.event.start.toISOString().slice(0,10);
+      const same = getAllEvents()
+        .filter(e=>e.start.toISOString().slice(0,10)===day)
+        .sort((a,b)=>a.start-b.start);
 
-    dateClick:(info)=>openDayModal(info.dateStr)
+      if(info.event.id !== same[0].id){
+        info.el.style.display="none";
+        return;
+      }
+      if(same.length>1){
+        info.el.innerHTML = `💩 x${same.length}`;
+      }
+    }
   });
 
   calendar.render();
@@ -223,15 +277,18 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   document.getElementById("poop-btn").onclick=()=>{
     calendar.addEvent({
-      id:Date.now().toString(),
+      id:crypto.randomUUID(),
       title:"💩",
-      start:new Date().toISOString(),
-      allDay:false,
+      start:new Date(),
       notes:""
     });
-    persistEvents();
+    persist();
+    updateStatus();
   };
+
+  setInterval(updateStatus,1000);
 });
 </script>
+
 </body>
 </html>
