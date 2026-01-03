@@ -134,8 +134,8 @@ function clearTestOffset(){testOffsetSeconds=null;updateStatus();}
 
 /* ===== UTIL ===== */
 function getEventsByDay(dateStr){
-  return calendar.getEvents().filter(e =>
-    e.start.toISOString().slice(0,10) === dateStr
+  return events.filter(e =>
+    e.start.slice(0,10) === dateStr
   );
 }
 
