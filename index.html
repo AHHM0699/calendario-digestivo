@@ -1,200 +1,144 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pooplendar 💩</title>
-
-<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
-
-<style>
-:root{
-  --brown-dark:#4e342e;
-  --brown-main:#6d4c41;
-  --brown-soft:#a1887f;
-  --brown-bg:#efe5db;
-  --brown-card:#f7efe8;
-  --brown-header:#e0cfc2;
-  --brown-border:#c7b1a2;
-  --alert-soft:#d7ccc8;
-  --alert-mid:#bcaaa4;
-  --alert-hard:#8d4b43;
-}
-
-body{
-  margin:0;
-  font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
-  background:var(--brown-bg);
-  color:var(--brown-dark);
-}
-
-h1{
-  text-align:center;
-  margin:12px 0 4px;
-  color:var(--brown-main);
-}
-
-#counter{
-  text-align:center;
-  font-weight:600;
-}
-
-#alert, #recommendations{
-  margin:6px 12px;
-  padding:10px;
-  border-radius:10px;
-  display:none;
-  font-weight:600;
-}
-
-#recommendations{
-  background:#efe1d6;
-  font-weight:500;
-}
-
-/* ---------- CALENDARIO ---------- */
-#calendar{ padding:8px; }
-
-.fc{
-  background:var(--brown-card);
-  border-radius:16px;
-  padding:6px;
-}
-
-.fc-daygrid-day{
-  background:var(--brown-card);
-  border:1px solid var(--brown-border);
-}
-
-.fc-day-today{ background:#e6d2c2 !important; }
-
-.fc-event{
-  background:transparent;
-  border:none;
-  font-size:20px;
-}
-
-/* ---------- BOTÓN 💩 ---------- */
-#poop-btn{
-  position:fixed;
-  bottom:20px;
-  right:20px;
-  width:72px;
-  height:72px;
-  border-radius:50%;
-  border:none;
-  background:var(--brown-main);
-  color:white;
-  font-size:40px;
-  z-index:1000;
-}
-</style>
-</head>
-
-<body>
-
-<h1>Pooplendar</h1>
-<div id="counter">Aún no hay registros</div>
-<div id="alert"></div>
-<div id="recommendations"></div>
-
-<div id="calendar"></div>
-<button id="poop-btn">💩</button>
-
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
-
 <script>
-const STORAGE_KEY="pooplendar_events";
-const ALERT_KEY="pooplendar_last_alert";
+const STORAGE_KEY = "pooplendar_events";
 
-let events=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
+let events = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
 let calendar;
 
-function evaluateAlert(diff){
-  if(diff < 172800) return null;
-  if(diff < 259200) return "warning";
-  if(diff < 604800) return "alert";
-  return "danger";
+/* --------- FORMATEO HUMANO DEL TIEMPO --------- */
+function formatElapsed(seconds) {
+  const min = 60;
+  const hour = 3600;
+  const day = 86400;
+  const week = day * 7;
+  const month = day * 30;
+  const year = day * 365;
+
+  if (seconds < hour) {
+    const m = Math.floor(seconds / min);
+    const s = seconds % min;
+    return `${m} minuto${m !== 1 ? "s" : ""} y ${s} segundo${s !== 1 ? "s" : ""}`;
+  }
+
+  if (seconds < day) {
+    const h = Math.floor(seconds / hour);
+    const m = Math.floor((seconds % hour) / min);
+    return `${h} hora${h !== 1 ? "s" : ""} y ${m} minuto${m !== 1 ? "s" : ""}`;
+  }
+
+  if (seconds < week) {
+    const d = Math.floor(seconds / day);
+    const h = Math.floor((seconds % day) / hour);
+    return `${d} día${d !== 1 ? "s" : ""} y ${h} hora${h !== 1 ? "s" : ""}`;
+  }
+
+  if (seconds < month) {
+    const w = Math.floor(seconds / week);
+    const d = Math.floor((seconds % week) / day);
+    return `${w} semana${w !== 1 ? "s" : ""} y ${d} día${d !== 1 ? "s" : ""}`;
+  }
+
+  if (seconds < year) {
+    const mo = Math.floor(seconds / month);
+    const d = Math.floor((seconds % month) / day);
+    return `${mo} mes${mo !== 1 ? "es" : ""} y ${d} día${d !== 1 ? "s" : ""}`;
+  }
+
+  const y = Math.floor(seconds / year);
+  const rem = seconds % year;
+  const mo = Math.floor(rem / month);
+  const d = Math.floor((rem % month) / day);
+  return `${y} año${y !== 1 ? "s" : ""}, ${mo} mes${mo !== 1 ? "es" : ""} y ${d} día${d !== 1 ? "s" : ""}`;
 }
 
-function updateUI(){
-  const counter=document.getElementById("counter");
-  const alertBox=document.getElementById("alert");
-  const recBox=document.getElementById("recommendations");
+/* --------- ALERTAS + RECOMENDACIONES --------- */
+function getAlertLevel(seconds) {
+  if (seconds < 172800) return null;          // < 48h
+  if (seconds < 259200) return "warning";     // 2–3 días
+  if (seconds < 604800) return "alert";       // 3–7 días
+  return "danger";                            // > 7 días
+}
 
-  if(!events.length){
-    counter.innerText="Aún no hay registros";
-    alertBox.style.display="none";
-    recBox.style.display="none";
+function updateStatus() {
+  const counter = document.getElementById("counter");
+  const alertBox = document.getElementById("alert");
+  const recBox = document.getElementById("recommendations");
+
+  if (events.length === 0) {
+    counter.innerText = "Aún no hay registros";
+    alertBox.style.display = "none";
+    recBox.style.display = "none";
     return;
   }
 
-  const last=new Date(Math.max(...events.map(e=>new Date(e.start))));
-  const diff=Math.floor((Date.now()-last)/1000);
+  const last = new Date(Math.max(...events.map(e => new Date(e.start))));
+  const diffSec = Math.floor((Date.now() - last) / 1000);
 
-  counter.innerText=`⏱️ Última vez: ${Math.floor(diff/3600)} horas aprox.`;
+  counter.innerText = `⏱️ Última vez: ${formatElapsed(diffSec)}`;
 
-  const level=evaluateAlert(diff);
+  const level = getAlertLevel(diffSec);
 
-  if(!level){
-    alertBox.style.display="none";
-    recBox.style.display="none";
+  if (!level) {
+    alertBox.style.display = "none";
+    recBox.style.display = "none";
     return;
   }
 
-  alertBox.style.display="block";
-  recBox.style.display="block";
+  alertBox.style.display = "block";
+  recBox.style.display = "block";
 
-  if(level==="warning"){
-    alertBox.style.background="var(--alert-soft)";
-    alertBox.innerText="⚠️ Han pasado más de 2 días sin evacuar.";
-    recBox.innerHTML=`
+  if (level === "warning") {
+    alertBox.innerText = "⚠️ Han pasado más de 2 días sin evacuar.";
+    alertBox.style.background = "#d7ccc8";
+    recBox.innerHTML = `
       💧 Bebe más agua<br>
       🚶 Camina 10–15 minutos
     `;
   }
 
-  if(level==="alert"){
-    alertBox.style.background="var(--alert-mid)";
-    alertBox.innerText="🚨 Más de 3 días sin evacuar.";
-    recBox.innerHTML=`
+  if (level === "alert") {
+    alertBox.innerText = "🚨 Más de 3 días sin evacuar.";
+    alertBox.style.background = "#bcaaa4";
+    recBox.innerHTML = `
       💧 Aumenta líquidos<br>
-      🥗 Consume fibra (frutas, avena)<br>
+      🥗 Consume fibra (frutas, avena, verduras)<br>
       🕒 Intenta ir al baño después de comer
     `;
   }
 
-  if(level==="danger"){
-    alertBox.style.background="var(--alert-hard)";
-    alertBox.style.color="white";
-    alertBox.innerText="❗ Más de una semana sin evacuar.";
-    recBox.innerHTML=`
+  if (level === "danger") {
+    alertBox.innerText = "❗ Más de una semana sin evacuar.";
+    alertBox.style.background = "#8d4b43";
+    alertBox.style.color = "white";
+    recBox.innerHTML = `
       ⚠️ Se recomienda consultar a un profesional de salud<br>
       🚫 Evita laxantes sin indicación médica
     `;
   }
 }
 
-setInterval(updateUI,1000);
-
-document.addEventListener("DOMContentLoaded",()=>{
-  calendar=new FullCalendar.Calendar(document.getElementById("calendar"),{
-    initialView:"dayGridMonth",
-    locale:"es",
-    events:events
+/* --------- CALENDARIO --------- */
+document.addEventListener("DOMContentLoaded", () => {
+  calendar = new FullCalendar.Calendar(document.getElementById("calendar"), {
+    initialView: "dayGridMonth",
+    locale: "es",
+    events: events
   });
   calendar.render();
-  updateUI();
+  updateStatus();
 
-  document.getElementById("poop-btn").onclick=()=>{
-    const ev={ id:crypto.randomUUID(), title:"💩", start:new Date().toISOString(), allDay:true };
+  document.getElementById("poop-btn").onclick = () => {
+    const ev = {
+      id: crypto.randomUUID(),
+      title: "💩",
+      start: new Date().toISOString(),
+      allDay: true
+    };
     events.push(ev);
-    localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
-    updateUI();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
     calendar.addEvent(ev);
+    updateStatus();
   };
+
+  setInterval(updateStatus, 1000);
 });
 </script>
-
-</body>
-</html>
