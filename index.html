@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pooplendar 💩</title>
 
-<!-- FullCalendar -->
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
 
 <style>
@@ -88,6 +87,7 @@ h1{
   color:white;
   font-size:40px;
   box-shadow:0 4px 12px rgba(78,52,46,.45);
+  z-index:1000; /* CLAVE */
 }
 
 /* ---------- MODAL ---------- */
@@ -98,6 +98,7 @@ h1{
   display:none;
   align-items:center;
   justify-content:center;
+  z-index:2000; /* CLAVE */
 }
 
 #modal-content{
@@ -164,7 +165,6 @@ button.delete{
   <div id="modal-content"></div>
 </div>
 
-<!-- FullCalendar JS -->
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
 
 <script>
