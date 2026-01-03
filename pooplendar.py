@@ -39,11 +39,40 @@ def register_event():
     st.success(f"Registro guardado – {now}")
 
 # ---------------- UI ----------------
-st.title("💩 Pooplendar")
+st.title("Pooplendar")
 st.caption("Registro simple y rápido")
 
-# BOTÓN PRINCIPAL (ICONO)
-if st.button("💩", use_container_width=True):
+# ---------- ESTILOS ----------
+st.markdown(
+    """
+    <style>
+    /* Oculta el texto del botón pero mantiene el área clickeable */
+    .poop-btn button {
+        font-size: 0px;
+        height: 110px;
+        width: 110px;
+        border-radius: 24px;
+    }
+    .poop-emoji {
+        font-size: 90px;
+        text-align: center;
+        margin-top: -95px;
+        pointer-events: none;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# ---------- BOTÓN 💩 VISUAL ----------
+c1, c2, c3 = st.columns([1,2,1])
+with c2:
+    st.markdown('<div class="poop-btn">', unsafe_allow_html=True)
+    clicked = st.button("register_poop", key="poop_register")
+    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('<div class="poop-emoji">💩</div>', unsafe_allow_html=True)
+
+if clicked:
     register_event()
 
 st.divider()
