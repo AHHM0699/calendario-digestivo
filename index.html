@@ -72,8 +72,12 @@ h1{text-align:center;margin:12px 0 4px;color:var(--brown-main);}
   background:#f7efe8;
   padding:16px;
   border-radius:14px;
-  width:90%;max-width:380px;
+  width:90%;
+  max-width:380px;
+  max-height:85vh;
+  overflow-y:auto;
 }
+
 .day-item{
   background:#efe1d6;
   border-radius:8px;
@@ -83,6 +87,23 @@ h1{text-align:center;margin:12px 0 4px;color:var(--brown-main);}
 .day-item textarea{
   width:100%;
   margin-top:4px;
+  font-size:16px;
+}
+
+.manual-form{
+  background:#e6d2c2;
+  padding:10px;
+  border-radius:10px;
+  margin-top:10px;
+}
+.manual-form input{
+  width:100%;
+  padding:6px;
+  margin-top:2px;
+  font-size:16px;
+}
+.manual-form button{
+  margin-top:8px;
 }
 </style>
 </head>
@@ -107,7 +128,16 @@ const STORAGE_KEY = "pooplendar_events";
 let calendar;
 let selectedDay = null;
 
-/* ---------- UTIL ---------- */
+/* ===== FECHA LOCAL ===== */
+function localDay(date){
+  const d = new Date(date);
+  d.setHours(0,0,0,0);
+  return d.getFullYear() + "-" +
+         String(d.getMonth()+1).padStart(2,"0") + "-" +
+         String(d.getDate()).padStart(2,"0");
+}
+
+/* ===== UTIL ===== */
 const getAllEvents = () => calendar.getEvents();
 
 function persist(){
@@ -120,7 +150,7 @@ function persist(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
-/* ---------- TIEMPO ---------- */
+/* ===== STATUS ===== */
 function formatElapsed(sec){
   const m=60,h=3600,d=86400,w=d*7,mo=d*30,y=d*365;
   if(sec<h) return `${Math.floor(sec/m)} min y ${sec%60} seg`;
@@ -131,7 +161,6 @@ function formatElapsed(sec){
   return `${Math.floor(sec/y)} año y ${Math.floor((sec%y)/mo)} mes`;
 }
 
-/* ---------- ALERTAS ---------- */
 function getAlertLevel(sec){
   if(sec<172800) return null;
   if(sec<259200) return "warning";
@@ -144,7 +173,7 @@ function updateStatus(){
   const alertBox=document.getElementById("alert");
   const recBox=document.getElementById("recommendations");
 
-  const evs = getAllEvents();
+  const evs=getAllEvents();
   if(evs.length===0){
     counter.innerText="Aún no hay registros";
     alertBox.style.display="none";
@@ -152,9 +181,8 @@ function updateStatus(){
     return;
   }
 
-  const last = new Date(Math.max(...evs.map(e=>e.start)));
-  const diff = Math.floor((Date.now()-last)/1000);
-
+  const last=new Date(Math.max(...evs.map(e=>e.start)));
+  const diff=Math.floor((Date.now()-last)/1000);
   counter.innerText=`⏱️ Última vez: ${formatElapsed(diff)}`;
 
   const level=getAlertLevel(diff);
@@ -181,12 +209,13 @@ function updateStatus(){
   }
 }
 
-/* ---------- MODAL ---------- */
+/* ===== MODAL ===== */
 function openDayModal(dateStr){
   selectedDay=dateStr;
   const box=document.getElementById("modal-content");
-  const list = getAllEvents()
-    .filter(e=>e.start.toISOString().slice(0,10)===dateStr)
+
+  const list=getAllEvents()
+    .filter(e=>localDay(e.start)===dateStr)
     .sort((a,b)=>a.start-b.start);
 
   let html=`<h3>${new Date(dateStr).toLocaleDateString()}</h3>`;
@@ -204,7 +233,21 @@ function openDayModal(dateStr){
     `;
   });
 
-  html+=`<button onclick="closeModal()">Cerrar</button>`;
+  const now=new Date();
+  const timeNow=now.toTimeString().slice(0,5);
+
+  html+=`
+    <div class="manual-form">
+      <strong>➕ Añadir registro manual</strong>
+      <label>Fecha</label>
+      <input type="date" id="manual-date" value="${dateStr}">
+      <label>Hora</label>
+      <input type="time" id="manual-time" value="${timeNow}">
+      <button onclick="addManual()">Guardar</button>
+    </div>
+    <button onclick="closeModal()">Cerrar</button>
+  `;
+
   box.innerHTML=html;
   document.getElementById("modal").style.display="flex";
 }
@@ -214,39 +257,60 @@ function closeModal(){
 }
 
 function saveNote(id,text){
-  const ev = calendar.getEventById(id);
+  const ev=calendar.getEventById(id);
   if(ev){ ev.setExtendedProp("notes",text); persist(); }
 }
 
 function deleteEvent(id){
-  const ev = calendar.getEventById(id);
+  document.activeElement?.blur();
+  const ev=calendar.getEventById(id);
   if(ev) ev.remove();
   persist();
   openDayModal(selectedDay);
 }
 
-/* ---------- INICIO ---------- */
-document.addEventListener("DOMContentLoaded",()=>{
-  const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
+function addManual(){
+  const date=document.getElementById("manual-date").value;
+  const time=document.getElementById("manual-time").value;
+  const [y,m,d]=date.split("-");
+  const [h,min]=time.split(":");
 
-  calendar = new FullCalendar.Calendar(document.getElementById("calendar"),{
+  const localDate=new Date(y,m-1,d,h,min);
+
+  calendar.addEvent({
+    id:crypto.randomUUID(),
+    title:"💩",
+    start:localDate,
+    notes:""
+  });
+
+  persist();
+  openDayModal(date);
+  updateStatus();
+}
+
+/* ===== INICIO ===== */
+document.addEventListener("DOMContentLoaded",()=>{
+  const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
+
+  calendar=new FullCalendar.Calendar(document.getElementById("calendar"),{
     initialView:"dayGridMonth",
     locale:"es",
     displayEventTime:false,
     events:saved,
     dateClick:(info)=>openDayModal(info.dateStr),
     eventDidMount:(info)=>{
-      const day = info.event.start.toISOString().slice(0,10);
-      const same = getAllEvents()
-        .filter(e=>e.start.toISOString().slice(0,10)===day)
+      const day=localDay(info.event.start);
+      const same=getAllEvents()
+        .filter(e=>localDay(e.start)===day)
         .sort((a,b)=>a.start-b.start);
 
-      if(info.event.id !== same[0].id){
+      if(info.event.id!==same[0].id){
         info.el.style.display="none";
         return;
       }
       if(same.length>1){
-        info.el.innerHTML = `💩 x${same.length}`;
+        info.el.innerHTML=`💩 x${same.length}`;
       }
     }
   });
